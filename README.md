@@ -10,9 +10,9 @@ The script will compute the adapted zoom and the tile size, and download all the
 The map will be a square whose center is (lat,long) with an edge of map length (in m) and image size (in pixels).
 
 
-          map length (m)
-        image size (pixels)
-
+	          map length (m)
+	        image size (pixels)
+	<------------------------------->
 	 -------------------------------
 	|                               |
 	|                               |
