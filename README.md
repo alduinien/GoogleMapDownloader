@@ -13,7 +13,7 @@ The map will be a square whose center is (lat,long) with an edge of map length (
           map length (m)
         image size (pixels)
 <_______________________________>
-_________________________________
+ -------------------------------
 |                               |
 |                               |
 |                               |
@@ -22,7 +22,7 @@ _________________________________
 |                               |
 |                               |
 |                               |
-|_______________________________|
+ -------------------------------
 
 
 The key parameter is not necessary but it might allow you to download much more if you request one on GMap site.
