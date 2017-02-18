@@ -8,38 +8,46 @@
 from urllib import request
 from PIL import Image
 import os
-import math
+from math import *
 
 class GoogleMapDownloader:
     """
         A class which generates high resolution google maps images given
-        a gmap API key and position parameters
+        a gmap API key and location parameters
     """
 
     def __init__(self, API_key, lat, lng, lgth, img_size=1000):
         """
             GoogleMapDownloader Constructor
             Args:
-                API_key: The GoogleMap API key to load images
-                lat:    The latitude of the location required
-                lng:    The longitude of the location required
-                lgth:   Length of the map in m. The map will be a square.
-                        warning: too big length will result in distorded map.
-                img_size: The resolution of image as img_size X img_size
-                        default to 1000
+                API_key:  The GoogleMap API key to load images
+                lat:      The latitude of the location required
+                lng:      The longitude of the location required
+                lgth:     Length of the map in m. The map will be a square.
+                          warning: too big length will result in distorded map due to mercator projection.
+                img_size: The resolution of the output image as img_size X img_size
+                          default to 1000
         """
-        k = 104857.6
+        lat_rad = (pi/180)*lat
         self._img_size = img_size
         self._lat = lat
         self._lng = lng
-        self._zoom = math.ceil(math.log2(k*img_size/lgth))
-        temp_size = int((2**self._zoom)*lgth/k)
-        self._nb_tiles = math.ceil(temp_size/500)
-        self._tile_size = math.floor(temp_size/self._nb_tiles)
+        self._zoom = floor(log2(156543.03 * img_size / lgth))
+        self._resolution = 156543.03 / (2 ** self._zoom) #(m/px)
+        self._nb_tiles = ceil(img_size/500)
+        self._tile_lgth = lgth/self._nb_tiles
+        self._tile_size = int(self._tile_lgth/self._resolution)
         self._API_key = API_key
 
-        #print("Map will have a length of: " + str(int(k*temp_size/(2**self._zoom))) + " m")
-        #print("Map will have a size   of: " + str(temp_size) + " p")
+    def getMercatorFromGPS(self,lng,lat):
+    	x = 6371000 * lng
+    	y = 6371000 * log(tan(pi/4 + lat/2))
+    	return (x,y)
+
+    def getGPSFromMercator(self,x,y):
+    	lng = x/6371000
+    	lat = 2*atan(exp(y/6371000)) - pi/2
+    	return (lng,lat)
 
     def generateImage(self):
         """
@@ -49,28 +57,32 @@ class GoogleMapDownloader:
                 A high-resolution Goole Map image.
         """
 
-        tile_width = self._nb_tiles
-        tile_height = self._nb_tiles
+        lat_rad = (pi/180)*abs(self._lat)
+        lng_rad = (pi/180)*abs(self._lng)
+        xy_loc  = self.getMercatorFromGPS(lng_rad,lat_rad)
 
-        lat_step = 0.95*self._tile_size/(2**self._zoom)
-        lon_step = 1.405*self._tile_size/(2**self._zoom)
+        xy_with_step  = [xy_loc[0]+self._tile_lgth , xy_loc[1]+self._tile_lgth]
+        gps_with_step = self.getGPSFromMercator(xy_with_step[0], xy_with_step[1])
+
+        lat_step = (180/pi)*(gps_with_step[1] - lat_rad)
+        lon_step = (180/pi)*(gps_with_step[0] - lng_rad)
 
         border = 20        
 
         # Determine the size of the image
-        width, height = self._tile_size * tile_width, self._tile_size * tile_height
+        width, height = self._tile_size * self._nb_tiles, self._tile_size * self._nb_tiles
 
         #Create a new image of the size require
         map_img = Image.new('RGB', (width,height))
 
 
-        nb_tiles_max = tile_width*tile_height
+        nb_tiles_max = self._nb_tiles**2
         counter = 1
-        for x in range(0, tile_width):
-            for y in range(0, tile_height) :
+        for x in range(0, self._nb_tiles):
+            for y in range(0, self._nb_tiles) :
 
-                la = self._lat - y*lat_step + lat_step*(tile_height-1)/2
-                lo = self._lng + x*lon_step - lon_step*(tile_width-1)/2
+                la = self._lat - y*lat_step + lat_step*(self._nb_tiles-1)/2
+                lo = self._lng + x*lon_step - lon_step*(self._nb_tiles-1)/2
 
                 url = 'https://maps.googleapis.com/maps/api/staticmap?'
                 url += 'center='+str(la)+','+str(lo)
@@ -98,17 +110,16 @@ def run_example():
     #GMap API is not free! Even if this script we adapted to use free acount settings
     #you might need a project key.
     #You can find one here: https://developers.google.com/maps/documentation/static-maps/intro
-    gmap_key  = ""
+    gmap_key  = "" 
 
-    latitude  = 47.547465
-    longitude = -2.057472
+    latitude  = 73.295938
+    longitude = -25.315502
 
-    map_size  = 2000
-    img_size  = 4000
+    map_size  = 200000
+    img_size  = 1320
 
     gmd = GoogleMapDownloader(gmap_key, latitude, longitude, map_size, img_size)
 
-    #print("The tile coorindates are {}".format(gmd.getXY()))
 
     try:
         # Get the high resolution image
